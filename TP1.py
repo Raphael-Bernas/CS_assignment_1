@@ -1,5 +1,6 @@
 import random
 import math
+import numpy as np
 import matplotlib.pyplot as plt
 set_seed = 1234
 random.seed(set_seed)
@@ -20,14 +21,49 @@ def marsaglia_bray():
     
     return X, Y
 
-def line(a, b, x):
-    return a*x + b
+def line(a, x):
+    return a*x 
+
+def Jn(w, X, y):
+        # Calculates the cost J_n(w) as Mean Squared Error for simplicity.
+        return 0.5 * np.mean((y - X.dot(w)) ** 2)
+    
+
+def stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X, y):
+    w = w0
+    k = 1  
+    n = X.shape[0]  # Number of samples
+    # Initial cost calculation
+    J_prev = Jn(w, X, y)
+    stop_crit = N_max
+    
+    while stop_crit > epsilon and k < N_max :
+        S = 0
+        for i in range(N_batch):
+            # Randomly select an index I from uniform distribution U([1, n])
+            I = np.random.randint(0, n)
+            S += -2*X[I]*(y[I] - X[I][1]*w[1]-X[I][0]*w[0])
+        S /= N_batch
+        # Update weights
+        if isinstance(eta, (list, np.ndarray)):  # Case when eta is a list of learning rates
+            w = w - eta[k] * S
+        else:  # Constant learning rate
+            w = w - eta * S
+        J_curr = Jn(w, X, y)
+        stop_crit = abs(J_curr - J_prev)/J_prev    
+        # Update for next iteration
+        J_prev = J_curr
+        k += 1
+        #print(k)
+        #print(w[0]/w[1])
+
+    return w
 
 def main():
     N = 150
     a = 1.3
-    b = -0.9
-    h = lambda x: line(a, b, x)
+    h = lambda x: line(a, x)
+    N_max = 10**5
     # create a list of samples of size N
     samples_x = []
     samples_y = []
@@ -39,20 +75,33 @@ def main():
         else :
             samples_x.append(X*math.sqrt(5)+5)
             samples_y.append(Y*math.sqrt(5))
-    sample_label = []
+    samples_label = []
     # divide the samples with the line
     for i in range(N):
         if samples_y[i] > h(samples_x[i]):
-            sample_label.append(1)
+            samples_label.append(1)
         else:
-            sample_label.append(-1)
+            samples_label.append(-1)
+    X = np.array([[samples_x[i],samples_y[i]] for i in range(N)])
+    y = np.array(samples_label)
+    eta = 0.01
+    w0 = (1,1)
+    N_batch = N//10
+    epsilon = 10e-10
+    w_hat = stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X, y)
+    print("Found w :")
+    print(-w_hat[0]/w_hat[1])
+    h_hat = lambda x: line(-w_hat[0]/w_hat[1], x)
     # plot the samples with color and the line
-    plt.scatter(samples_x, samples_y, c=sample_label)
+    plt.scatter(samples_x, samples_y, c=samples_label)
     plt.plot([-10, 15], [h(-10), h(15)])
     # add title with the line coeffictients
-    plt.title(f"Line: y = {a}x + {b}")
+    plt.title(f"Line: y = {a}x")
     # save the figure
     plt.savefig("samples.png")
+    # plot the estimated line 
+    plt.plot([-10, 15], [h_hat(-10), h_hat(15)])
+    plt.savefig("estimated.png")
     plt.show()
     
 if __name__ == "__main__":
