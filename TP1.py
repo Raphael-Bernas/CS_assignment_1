@@ -2,6 +2,7 @@ import random
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+from ucimlrepo import fetch_ucirepo
 set_seed = 1234
 random.seed(set_seed)
 
@@ -58,6 +59,32 @@ def stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X, y):
         #print(w[0]/w[1])
 
     return w
+
+def test_cancer_data():
+    breast_cancer_wisconsin_diagnostic = fetch_ucirepo(id=17) 
+    # data (as pandas dataframes) 
+    X = breast_cancer_wisconsin_diagnostic.data.features 
+    y = breast_cancer_wisconsin_diagnostic.data.targets
+
+    # Ensure that y is a binary classification
+    y = y.map(lambda x: 1 if x == 'M' else -1)
+
+    eta = 0.01
+    w0 = np.ones(X.shape[1])
+    N_batch = len(y) // 10
+    epsilon = 10e-10
+    N_max = 10**5
+    w_hat = stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X.values, y.values)
+    
+    print("Found w :")
+    print(-w_hat[0]/w_hat[1])
+    h_hat = lambda x: line(-w_hat[0]/w_hat[1], x)
+    
+    # plot the samples with color and the line
+    plt.scatter(X.iloc[:, 0], X.iloc[:, 1], c=y)
+    plt.plot([-10, 15], [h_hat(-10), h_hat(15)])
+    plt.savefig("TP1_results/cancer.png")
+    plt.show()
 
 def main(noised = False):
     N = 150
@@ -130,5 +157,8 @@ def main(noised = False):
         plt.show()
     
 if __name__ == "__main__":
-    main(noised=True)
-    
+    generate = False
+    if generate:
+        main(noised=True)
+    else:
+        test_cancer_data()
