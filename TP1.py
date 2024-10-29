@@ -59,7 +59,7 @@ def stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X, y):
 
     return w
 
-def main():
+def main(noised = False):
     N = 150
     a = 1.3
     h = lambda x: line(a, x)
@@ -88,22 +88,47 @@ def main():
     w0 = (1,1)
     N_batch = N//10
     epsilon = 10e-10
-    w_hat = stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X, y)
-    print("Found w :")
-    print(-w_hat[0]/w_hat[1])
-    h_hat = lambda x: line(-w_hat[0]/w_hat[1], x)
-    # plot the samples with color and the line
-    plt.scatter(samples_x, samples_y, c=samples_label)
-    plt.plot([-10, 15], [h(-10), h(15)])
-    # add title with the line coeffictients
-    plt.title(f"Line: y = {a}x")
-    # save the figure
-    plt.savefig("samples.png")
-    # plot the estimated line 
-    plt.plot([-10, 15], [h_hat(-10), h_hat(15)])
-    plt.savefig("estimated.png")
-    plt.show()
+    if not noised:
+        w_hat = stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X, y)
+        print("Found w :")
+        print(-w_hat[0]/w_hat[1])
+        h_hat = lambda x: line(-w_hat[0]/w_hat[1], x)
+        # plot the samples with color and the line
+        plt.scatter(samples_x, samples_y, c=samples_label)
+        plt.plot([-10, 15], [h(-10), h(15)])
+        # add title with the line coeffictients
+        plt.title(f"Line: y = {a}x")
+        # save the figure
+        plt.savefig("TP1_results/samples.png")
+        # plot the estimated line 
+        plt.plot([-10, 15], [h_hat(-10), h_hat(15)])
+        plt.savefig("TP1_results/estimated.png")
+        plt.show()
+    else:
+        # noising the samples
+        noise = 0.1
+        samples_x_noised = np.zeros(N)
+        samples_y_noised = np.zeros(N)
+        for i in range(N):
+            x1,x2 = marsaglia_bray()
+            samples_x_noised[i] += noise*x1
+            samples_y_noised[i] += noise*x2
+        X_noised = np.array([[samples_x[i]+samples_x_noised[i],samples_y[i]+samples_y_noised[i]] for i in range(N)])
+        w_hat_noised = stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X_noised, y)
+        print("Found w noised:")
+        print(-w_hat_noised[0]/w_hat_noised[1])
+        h_hat_noised = lambda x: line(-w_hat_noised[0]/w_hat_noised[1], x)
+        plt.scatter(samples_x, samples_y, c=samples_label)
+        plt.plot([-10, 15], [h(-10), h(15)])
+        # add title with the line coeffictients
+        plt.title(f"Line: y = {a}x")
+        # save the figure
+        plt.savefig("TP1_results/samples.png")
+        # plot the noised line
+        plt.plot([-10, 15], [h_hat_noised(-10), h_hat_noised(15)])
+        plt.savefig("TP1_results/noised.png")
+        plt.show()
     
 if __name__ == "__main__":
-    main()
+    main(noised=True)
     
