@@ -1,1 +1,1 @@
-# CS_assignment_1
+# Computational Statistics Assignment
