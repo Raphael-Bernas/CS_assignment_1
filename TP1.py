@@ -31,9 +31,10 @@ def Jn(w, X, y):
     
 
 def stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X, y, return_j=False, learning_rate_decay=1., sign = False):
-    w = w0
+    w = w0.copy()
     k = 1  
     n = X.shape[0]  # Number of samples
+    w = w.reshape(X.shape[1],1)
     # Initial cost calculation
     J_prev = Jn(w, X, y)
     if return_j:
@@ -45,27 +46,28 @@ def stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X, y, return_j
         S = 0
         for i in range(N_batch):
             # Randomly select an index I from uniform distribution U([1, n])
-            I = np.random.randint(0, n)
+            I = random.randint(0, n-1)
             # Update the gradient
             if sign:
                 S += -np.sign(X[I]*(y[I] - X[I].dot(w)))
             else:
                 print((y[I] - X[I].dot(w)))
-                S += -2*X[I]*(y[I] - X[I].dot(w))
+                S += 2*(X[I].dot(w)-y[I])*X[I]
         S /= N_batch
+        S = S.reshape(w.shape)
         # Update weights
         w = w - eta_curr*S
         J_curr = Jn(w, X, y)
-        #print(J_curr)
-        stop_crit = abs(J_curr - J_prev)/J_prev    
+        print(J_curr)
+        stop_crit = abs(J_curr - J_prev)/J_prev+1    
         # Update for next iteration
         J_prev = J_curr
         if return_j:
             J.append(J_curr)
         k += 1
         eta_curr = eta_curr * learning_rate_decay
-        #print(k)
-        #print(w[0]/w[1])
+        # #print(k)
+        # #print(w[0]/w[1])
     if return_j:
         print(J[0],J[-1])
         return w, J
@@ -86,12 +88,12 @@ def test_cancer_data():
     # print(mean)
     # X_reduced = np.array([X_reduced[i,:] - mean for i in range(X_reduced.shape[0])])
 
-    eta = 0.01
-    w0 = np.zeros(X_reduced.shape[1])
+    eta = 0.000001
+    w0 = np.ones(X_reduced.shape[1])
     N_batch = len(y) // 500
     epsilon = 10e-10
     N_max = 10**4
-    w_hat, J_val = stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X_reduced, y.values, return_j=True, sign=False, learning_rate_decay=0.999)
+    w_hat, J_val = stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X_reduced, y.values, return_j=True, sign=False, learning_rate_decay=1.)
     
     print("Found w :")
     print(-w_hat[0]/w_hat[1])
