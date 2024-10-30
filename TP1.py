@@ -30,35 +30,47 @@ def Jn(w, X, y):
         return 0.5 * np.mean((y - X.dot(w)) ** 2)
     
 
-def stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X, y):
+def stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X, y, return_j=False, learning_rate_decay=1., sign = False):
     w = w0
     k = 1  
     n = X.shape[0]  # Number of samples
     # Initial cost calculation
     J_prev = Jn(w, X, y)
+    if return_j:
+        J = [J_prev]
     stop_crit = N_max
+    eta_curr = eta
     
     while stop_crit > epsilon and k < N_max :
         S = 0
         for i in range(N_batch):
             # Randomly select an index I from uniform distribution U([1, n])
             I = np.random.randint(0, n)
-            S += -2*X[I]*(y[I] - X[I][1]*w[1]-X[I][0]*w[0])
+            # Update the gradient
+            if sign:
+                S += -np.sign(X[I]*(y[I] - X[I].dot(w)))
+            else:
+                print((y[I] - X[I].dot(w)))
+                S += -2*X[I]*(y[I] - X[I].dot(w))
         S /= N_batch
         # Update weights
-        if isinstance(eta, (list, np.ndarray)):  # Case when eta is a list of learning rates
-            w = w - eta[k] * S
-        else:  # Constant learning rate
-            w = w - eta * S
+        w = w - eta_curr*S
         J_curr = Jn(w, X, y)
+        #print(J_curr)
         stop_crit = abs(J_curr - J_prev)/J_prev    
         # Update for next iteration
         J_prev = J_curr
+        if return_j:
+            J.append(J_curr)
         k += 1
+        eta_curr = eta_curr * learning_rate_decay
         #print(k)
         #print(w[0]/w[1])
-
-    return w
+    if return_j:
+        print(J[0],J[-1])
+        return w, J
+    else:
+        return w
 
 def test_cancer_data():
     breast_cancer_wisconsin_diagnostic = fetch_ucirepo(id=17) 
@@ -68,23 +80,33 @@ def test_cancer_data():
 
     # Ensure that y is a binary classification
     y = y.map(lambda x: 1 if x == 'M' else -1)
+    X_reduced = X.values#[:,:2]
+    # # Center the data
+    # mean = [(1/X_reduced.shape[0])*np.sum(X_reduced[:,0]),(1/X_reduced.shape[0])*np.sum(X_reduced[:,1])]
+    # print(mean)
+    # X_reduced = np.array([X_reduced[i,:] - mean for i in range(X_reduced.shape[0])])
 
     eta = 0.01
-    w0 = np.ones(X.shape[1])
-    N_batch = len(y) // 10
+    w0 = np.zeros(X_reduced.shape[1])
+    N_batch = len(y) // 500
     epsilon = 10e-10
-    N_max = 10**5
-    w_hat = stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X.values, y.values)
+    N_max = 10**4
+    w_hat, J_val = stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X_reduced, y.values, return_j=True, sign=False, learning_rate_decay=0.999)
     
     print("Found w :")
     print(-w_hat[0]/w_hat[1])
     h_hat = lambda x: line(-w_hat[0]/w_hat[1], x)
     
     # plot the samples with color and the line
-    plt.scatter(X.iloc[:, 0], X.iloc[:, 1], c=y)
-    plt.plot([-10, 15], [h_hat(-10), h_hat(15)])
+    plt.scatter(X.iloc[:, 0], X.iloc[:, 1], c=y.values)
+    plt.plot([-10, 20], [h_hat(-10), h_hat(20)])
     plt.savefig("TP1_results/cancer.png")
     plt.show()
+    # plot the cost function
+    plt.plot(J_val)
+    plt.savefig("TP1_results/cost.png")
+    plt.show()
+
 
 def main(noised = False):
     N = 150
