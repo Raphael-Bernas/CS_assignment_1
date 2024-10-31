@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from ucimlrepo import fetch_ucirepo
 set_seed = 1234
-random.seed(set_seed)
+#random.seed(set_seed)
 
 def marsaglia_bray():
     V1 = 1
@@ -30,10 +30,13 @@ def Jn(w, X, y):
         return 0.5 * np.mean((y - X.dot(w)) ** 2)
     
 
-def stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X, y, return_j=False, learning_rate_decay=1., sign = False):
+def stochastic_gradient_descent(N_max, w0, eta, epsilon, X, y, N_batch = 1, return_j=False, learning_rate_decay=1., sign = False):
     w = w0.copy()
+    w = w / np.linalg.norm(w)
     k = 1  
     n = X.shape[0]  # Number of samples
+    # normalize the data
+    X = (X - np.mean(X, axis=0)) / np.std(X, axis=0)
     w = w.reshape(X.shape[1],1)
     # Initial cost calculation
     J_prev = Jn(w, X, y)
@@ -51,7 +54,7 @@ def stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X, y, return_j
             if sign:
                 S += -np.sign(X[I]*(y[I] - X[I].dot(w)))
             else:
-                print((y[I] - X[I].dot(w)))
+                #print((y[I] - X[I].dot(w)))
                 S += 2*(X[I].dot(w)-y[I])*X[I]
         S /= N_batch
         S = S.reshape(w.shape)
@@ -88,12 +91,12 @@ def test_cancer_data():
     # print(mean)
     # X_reduced = np.array([X_reduced[i,:] - mean for i in range(X_reduced.shape[0])])
 
-    eta = 0.000001
+    eta = 0.001
     w0 = np.ones(X_reduced.shape[1])
-    N_batch = len(y) // 500
+    N_batch = 1
     epsilon = 10e-10
     N_max = 10**4
-    w_hat, J_val = stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X_reduced, y.values, return_j=True, sign=False, learning_rate_decay=1.)
+    w_hat, J_val = stochastic_gradient_descent(N_max, w0, eta, epsilon, X_reduced, y.values, N_batch = N_batch, return_j=True, sign=False, learning_rate_decay=.999)
     
     print("Found w :")
     print(-w_hat[0]/w_hat[1])
@@ -140,7 +143,7 @@ def main(noised = False):
     N_batch = N//10
     epsilon = 10e-10
     if not noised:
-        w_hat = stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X, y)
+        w_hat = stochastic_gradient_descent(N_max, w0, eta, epsilon, X, y)
         print("Found w :")
         print(-w_hat[0]/w_hat[1])
         h_hat = lambda x: line(-w_hat[0]/w_hat[1], x)
@@ -165,7 +168,7 @@ def main(noised = False):
             samples_x_noised[i] += noise*x1
             samples_y_noised[i] += noise*x2
         X_noised = np.array([[samples_x[i]+samples_x_noised[i],samples_y[i]+samples_y_noised[i]] for i in range(N)])
-        w_hat_noised = stochastic_gradient_descent(N_max, w0, eta, N_batch, epsilon, X_noised, y)
+        w_hat_noised = stochastic_gradient_descent(N_max, w0, eta, epsilon, X_noised, y)
         print("Found w noised:")
         print(-w_hat_noised[0]/w_hat_noised[1])
         h_hat_noised = lambda x: line(-w_hat_noised[0]/w_hat_noised[1], x)
