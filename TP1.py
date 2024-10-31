@@ -47,7 +47,7 @@ def stochastic_gradient_descent(N_max, w0, eta, epsilon, X, y, N_batch = 1, retu
     
     while stop_crit > epsilon and k < N_max :
         S = 0
-        for i in range(N_batch):
+        for i in range(N_batch): # When N_batch = 1, this is the basic stochastic gradient descent
             # Randomly select an index I from uniform distribution U([1, n])
             I = random.randint(0, n-1)
             # Update the gradient
