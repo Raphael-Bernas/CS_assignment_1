@@ -171,6 +171,9 @@ def p(x):
 def q(x):
     return 2 / np.sqrt(2 * np.pi * 1.5) * np.exp(-((0.8 - x)**2) / (2 * 1.5))
 
+def f(x):
+    return 2 * np.sin(np.pi / 1.5 * x) * (x >= 0)
+
 def sample_q(size):
     rng = np.random.default_rng()
     return rng.normal(loc=0.8, scale=np.sqrt(1.5), size=size)
@@ -180,6 +183,13 @@ def importance_sampling(n_samples):
     samples = samples[samples >= 0]
     weights = p(samples) / q(samples)
     return samples, weights
+
+def compute_average_var(n_samples):
+    samples, weights = importance_sampling(n_samples)
+    weighted_f = f(samples) * weights
+    average = np.sum(weighted_f) / np.sum(weights)
+    var = np.sum(weights * (f(samples) - average)**2) / np.sum(weights)
+    return average, var
 
 
 ##########################################################Main##########################################################
@@ -275,8 +285,12 @@ if __name__ == "__main__":
     # Number of samples
     n_samples = 10000
 
-    samples, weights = importance_sampling(n_samples)
+    # Compute the average
+    average, var = compute_average_var(n_samples)
+    print(f"Average of f(x) over the density p(x) using importance sampling: {average}")
+    print(f"Variance of f(x) over the density p(x) using importance sampling: {var}")
 
+    samples, weights = importance_sampling(n_samples)
     # Plot the results
     plt.figure(figsize=(10, 6))
     plt.hist(samples, bins=50, density=True, alpha=0.6, color='b', label='Weighted Samples')
@@ -287,4 +301,22 @@ if __name__ == "__main__":
     plt.legend()
     plt.title('Importance Sampling')
     plt.savefig("TP2_results/importance_sampling.png")
+    plt.show()
+
+    # Compute average and variance for different number of samples and plot the results
+    n_samples = [100, 1000, 10000, 100000]
+    averages = []
+    variances = []
+    for n in n_samples:
+        average, var = compute_average_var(n)
+        averages.append(average)
+        variances.append(var)
+    plt.figure(figsize=(10, 6))
+    plt.plot(n_samples, averages, 'ro-', label='Average')
+    plt.plot(n_samples, variances, 'bo-', label='Variance')
+    plt.xlabel('Number of Samples')
+    plt.ylabel('Value')
+    plt.legend()
+    plt.title('Average and Variance of f(x) over p(x) using Importance Sampling')
+    plt.savefig("TP2_results/average_variance.png")
     plt.show()
