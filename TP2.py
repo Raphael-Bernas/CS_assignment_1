@@ -59,6 +59,81 @@ def plot_gmm_samples(samples, mu, sigma):
     plt.savefig("TP2_results/sample_gmm.png")
     plt.show()
 
+class GMMEM:
+    def __init__(self, X, m):
+        n, d = X.shape
+        self.n = n
+        self.d = d
+        self.X = X
+        self.m = m
+        self.alpha = np.ones(m) / m
+        self.mu = X[np.random.choice(n, m, replace=False)]
+        self.sigma = [np.eye(d) for _ in range(m)]
+        self.gamma = np.zeros((n, m))
+        self.log_likelihoods = []
+        self.max_distances_to_alpha = []
+        self.max_distances_to_mu = []
+        self.max_distances_to_sigma = []
+
+    def e_step(self):
+        n, m = self.n, self.m
+        gamma = np.zeros((n, m))
+        for i in range(n):
+            for j in range(m):
+                gamma[i, j] = alpha[j] * self.multivariate_gaussian(i, j)
+            gamma[i, :] /= np.sum(gamma[i, :])
+        self.gamma = gamma
+
+    def m_step(self):
+        n, d = self.n, self.d
+        m = self.m
+        X = self.X
+        gamma = self.gamma
+        alpha = np.sum(gamma, axis=0) / n
+        mu = np.dot(gamma.T, X) / np.sum(gamma, axis=0)[:, None]
+        sigma = []
+        for j in range(m):
+            diff = X - mu[j]
+            sigma_j = np.dot(gamma[:, j] * diff.T, diff) / np.sum(gamma[:, j])
+            sigma.append(sigma_j)
+        self.alpha = alpha
+        self.mu = mu
+        self.sigma = sigma
+
+    def multivariate_gaussian(self, i, j):
+        d = self.d
+        x = self.X[i]
+        mu = self.mu[j]
+        x_mu = x - mu
+        sigma = self.sigma[j]
+        inv_sigma = np.linalg.inv(sigma)
+        return np.exp(-0.5 * np.dot(np.dot(x_mu.T, inv_sigma), x_mu)) / np.sqrt((2 * np.pi) ** d * np.linalg.det(sigma))
+
+    def log_likelihood(self):
+        n = self.n
+        alpha = self.alpha
+        ll = 0
+        for i in range(n):
+            temp = 0
+            for j in range(len(alpha)):
+                temp += alpha[j] * self.multivariate_gaussian(i, j)
+            ll += np.log(temp)
+        self.log_likelihoods.append(ll)
+
+    def em_algorithm(self, max_iter=1000, tol=1e-4, true_sigma=None, true_alpha=None, true_mu=None):
+        for _ in range(max_iter):
+            self.e_step()
+            self.m_step()
+            if true_sigma is not None:
+                self.max_distances_to_sigma.append(max([np.linalg.norm(self.sigma[i] - true_sigma[i]) for i in range(len(true_sigma))]))
+            if true_alpha is not None:
+                self.max_distances_to_alpha.append(np.linalg.norm(self.alpha - true_alpha))
+            if true_mu is not None:
+                self.max_distances_to_mu.append(max([np.linalg.norm((self.mu)[i] - true_mu[i]) for i in range(len(true_mu))]))
+            self.log_likelihood()
+            if len(self.log_likelihoods) > 1 and abs(self.log_likelihoods[-1] - self.log_likelihoods[-2]) < tol:
+                break
+
 if __name__ == "__main__":
     # Ex1
     Px = [0.1, 0.3, 0.4, 0.2]
@@ -71,8 +146,44 @@ if __name__ == "__main__":
     alpha = [0.3, 0.4, 0.3] 
     mu = np.array([[0, 0], [3, 3], [0, 3]])  
     sigma = [np.eye(2), np.eye(2), np.eye(2)] 
-
+    anti_diag_matrix = np.fliplr(np.eye(len(mu[:,0])))
     # Samples
-    n = 1000 
+    n = 10000
     samples = sample_from_gmm(alpha, mu, sigma, n)
     plot_gmm_samples(samples, mu, sigma)
+
+    # EM Algorithm
+    show = True
+    gmm = GMMEM(samples, 3)
+    if show:
+        gmm.em_algorithm(true_sigma=sigma, true_alpha=alpha, true_mu=mu)
+    else:
+        gmm.em_algorithm()
+    # plot log likelihood
+    plt.figure(figsize=(10, 6))
+    plt.plot(gmm.log_likelihoods)
+    plt.xlabel('Iterations')
+    plt.ylabel('Log Likelihood')
+    plt.title('Log Likelihood of EM Algorithm')
+    plt.savefig("TP2_results/log_likelihood.png")
+    plt.show()
+    if show:
+        k = range(len(gmm.max_distances_to_mu))
+        # plot all normalised max distances
+        plt.figure(figsize=(10, 6))
+        plt.plot(k, gmm.max_distances_to_alpha/max(gmm.max_distances_to_alpha), label='Alpha')
+        plt.plot(k, gmm.max_distances_to_mu/max(gmm.max_distances_to_mu), label='Mu')
+        plt.plot(k, gmm.max_distances_to_sigma/max(gmm.max_distances_to_sigma), label='Sigma')
+        plt.xlabel('Iterations')
+        plt.ylabel('Normalised Max Distance')
+        plt.legend()
+        plt.title('Normalised Max Distance to True Parameters')
+        plt.savefig("TP2_results/max_distances.png")
+        plt.show()
+    print("Alpha")
+    print(gmm.alpha)
+    print("Mu")
+    print(gmm.mu)
+    if show:
+        print("Max distance to sigma :")
+        print(gmm.max_distances_to_sigma[-1])
