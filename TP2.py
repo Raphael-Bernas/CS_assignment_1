@@ -168,27 +168,42 @@ def plot_contour(gmm, data):
 def p(x):
     return x**(1.65-1) * np.exp(-x**2 / 2) * (x >= 0)
 
-def q(x):
-    return 2 / np.sqrt(2 * np.pi * 1.5) * np.exp(-((0.8 - x)**2) / (2 * 1.5))
+def q(x, mu=0.8, sigma=1.5):
+    return 2 / np.sqrt(2 * np.pi * sigma) * np.exp(-((mu - x)**2) / (2 * sigma))
 
 def f(x):
     return 2 * np.sin(np.pi / 1.5 * x) * (x >= 0)
 
-def sample_q(size):
+def sample_q(size, mu=0.8, sigma=1.5):
     rng = np.random.default_rng()
-    return rng.normal(loc=0.8, scale=np.sqrt(1.5), size=size)
+    return rng.normal(loc=mu, scale=np.sqrt(sigma), size=size)
 
-def importance_sampling(n_samples):
-    samples = sample_q(n_samples)
-    samples = samples[samples >= 0]
-    weights = p(samples) / q(samples)
+def importance_sampling(n_samples, mu = None, sigma = None):
+    if mu is None:
+        samples = sample_q(n_samples)
+        samples = samples[samples >= 0]
+        weights = p(samples) / q(samples)
+    else:
+        if sigma is None:
+            sigma = 1.5
+        samples = sample_q(n_samples, mu=mu, sigma=sigma)
+        samples = samples[samples >= 0]
+        weights = p(samples) / q(samples, mu=mu, sigma=sigma)
     return samples, weights
 
-def compute_average_var(n_samples):
-    samples, weights = importance_sampling(n_samples)
-    weighted_f = f(samples) * weights
-    average = np.sum(weighted_f) / np.sum(weights)
-    var = np.sum(weights * (f(samples) - average)**2) / np.sum(weights)
+def compute_average_var(n_samples, mu=None, sigma=None):
+    if mu is None:
+        samples, weights = importance_sampling(n_samples)
+        weighted_f = f(samples) * weights
+        average = np.sum(weighted_f) / np.sum(weights)
+        var = np.sum(weights * (f(samples) - average)**2) / np.sum(weights)
+    else:
+        if sigma is None:
+            sigma = 1.5
+        samples, weights = importance_sampling(n_samples, mu=mu, sigma=sigma)
+        weighted_f = f(samples) * weights
+        average = np.sum(weighted_f) / np.sum(weights)
+        var = np.sum(weights * (f(samples) - average)**2) / np.sum(weights)
     return average, var
 
 
@@ -319,4 +334,25 @@ if __name__ == "__main__":
     plt.legend()
     plt.title('Average and Variance of f(x) over p(x) using Importance Sampling')
     plt.savefig("TP2_results/average_variance.png")
+    plt.show()
+
+    # Experiment with a different proposal distribution q(x) = N(mu, sigma) where mu = 6 and sigma = 1.5
+    n_samples = 10000
+
+    # Compute the average
+    average, var = compute_average_var(n_samples, mu=6)
+    print(f"Average of f(x) over the density p(x) using importance sampling: {average}")
+    print(f"Variance of f(x) over the density p(x) using importance sampling: {var}")
+
+    samples, weights = importance_sampling(n_samples, mu=6)
+    # Plot the results
+    plt.figure(figsize=(10, 6))
+    plt.hist(samples, bins=50, density=True, alpha=0.6, color='b', label='Weighted Samples')
+    x = np.linspace(0, np.max(samples), 1000)
+    plt.plot(x, p(x), 'r-', label='Target Distribution p(x)')
+    plt.xlabel('x')
+    plt.ylabel('Density')
+    plt.legend()
+    plt.title('Importance Sampling')
+    plt.savefig("TP2_results/importance_sampling_2.png")
     plt.show()
